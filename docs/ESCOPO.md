@@ -1,19 +1,33 @@
 # Etapas entregues e continuação
 
-## Etapa 1 — fluxo operacional funcional
+## Operação da loja
 
-Entregue: autenticação, perfis, contatos, entrada individual com checklist e anexos, estoque, venda com acessórios e troca, pagamentos combinados, contas, documentos e garantia. As operações principais são transacionais e os valores partem dos registros.
+Autenticação, perfis, contatos, entrada individual com checklist e anexos, estoque, venda com acessórios e troca, pagamentos combinados, contas, documentos e garantia. Operações principais transacionais, valores a partir de registros reais, sem base de demonstração.
 
-## Etapa 2 — controle e recuperação
+## Controle e recuperação
 
-Entregue: taxas configuráveis, parcelas e recebimentos previstos, cancelamento com histórico e estornos pendentes, alertas de estoque e garantias, histórico de atendimentos, auditoria, exportação, comandos de backup/restauração e guias locais/hospedagem.
+Taxas configuráveis, parcelas e previsões, cancelamento com histórico e estornos pendentes, alertas de estoque e garantias, atendimentos, auditoria, exportação, backup/restauração e guias locais/hospedagem.
 
-## Próximas etapas ainda não implementadas
+## Ampliação orientada pelo vídeo
 
-- Integração fiscal real: selecionar fornecedor fiscal autorizado, implementar adaptador de emissão/consulta/cancelamento, ambientes de homologação/produção, credenciais protegidas, certificados e requisitos tributários com apoio contábil. Os anexos e documentos internos atuais não fazem isso.
-- Consultas externas: selecionar serviço autorizado e credenciais, registrar fonte, horário e resposta real. Nunca tratar checklist manual como consulta.
-- WhatsApp/Instagram: APIs oficiais e consentimentos/contas necessários; mensagens e publicação não estão disponíveis.
-- Assinatura digital: escolher provedor e validar resultados de assinatura; anexar PDF não valida assinatura.
-- OS completa, orçamento, reservas com sinal e prazo, catálogo público, CRM, relatórios avançados e devoluções parciais.
+- Orçamentos com validade, impressão e conversão em venda; preço alterado exige nova proposta.
+- PDV com valores visíveis enquanto seleciona produtos e informa pagamentos, taxas e troca; linhas adicionais.
+- OS com etapas, limite/autorização, peças, execução, lista/Kanban, histórico e documentos; tratamento separado para manutenção interna.
+- Estoque de peças com custo médio, consumo e retorno físico confirmado.
+- Caixa físico com abertura/fechamento, contagem, diferença e sangria/reforço com contrapartida.
+- Agenda, aniversariantes e lembretes locais de pós-venda, sem mensagens externas.
+- Simulador de cartão com taxa configurada e calculadora manual de avaliação para troca.
+- Seis relatórios com filtros, CSV e impressão/PDF; edição administrativa de contatos e preço/inspeção de aparelhos disponíveis, com histórico.
 
-A aplicação foi organizada em cadastros, serviços de domínio, formulários, visões e documentos para permitir essas extensões. Não há adaptadores fictícios que retornem sucesso. Nenhum site foi hospedado e nenhum serviço foi contratado.
+As funcionalidades observadas, tempos aproximados e limites estão em `REFERENCIA-VIDEO.md`. Não foi declarada equivalência integral ao produto de referência. A análise foi visual, sem transcrição do áudio; menus não demonstrados não foram tratados como especificação completa.
+
+## Ainda não implementado
+
+- Integração fiscal real, certificados, SEFAZ e emissão/consulta/cancelamento fiscal de entrada ou saída.
+- Consultas externas de IMEI, iCloud, restrições ou cobertura Apple.
+- WhatsApp/Instagram/e-mail, disparos automáticos, campanhas, provedor de assinatura digital.
+- CRM com funil, catálogo público, indicação/cashback, multiloja, API pública e webhooks.
+- Devolução parcial, crediário, cancelamento de OS entregue, recebimento parcelado por cartão na OS e gestão de comissão.
+- DRE contábil/fiscal, todos os relatórios especializados e as regras internas não demonstradas no vídeo.
+
+Código no GitHub não significa hospedagem de um site. Nenhum serviço externo foi contratado ou configurado.

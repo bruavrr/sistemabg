@@ -59,14 +59,17 @@ def dashboard(request):
     sales=list(Sale.objects.filter(status='completed',created_at__date__gte=start,created_at__date__lte=end))
     stock=list(Device.objects.filter(status__in=['available','reserved','maintenance']))
     accessories=list(Accessory.objects.all())
+    parts=list(ServicePart.objects.all())
     ledgers=list(Ledger.objects.filter(voided=False))
     settled=[l for l in ledgers if l.settled_date and start<=l.settled_date<=end]
     pending=[l for l in ledgers if not l.settled_date]
     cash=sum((l.amount for l in ledgers if l.settled_date and l.settled_date<=today),ZERO)
-    excluded=['Compra de estoque','Estorno','Despesa vinculada ao estoque']
+    excluded=['Compra de estoque','Estorno','Despesa vinculada ao estoque','Transferência interna','Custo de mão de obra']
     expenses=-sum((l.amount for l in settled if l.amount<0 and l.category not in excluded),ZERO)
     expenses-=sum((l.amount for l in settled if l.reverses_id and l.amount>0 and l.reverses.amount<0 and l.reverses.category not in excluded),ZERO)
-    metrics=[('Faturamento no período',sum((s.total for s in sales),ZERO)),('Resultado das vendas',sum((s.profit for s in sales),ZERO)),('Despesas operacionais pagas',expenses),('Saldo de caixa atual',cash),('Contas a receber • total',sum((l.amount for l in pending if l.amount>0),ZERO)),('Contas a pagar • total',-sum((l.amount for l in pending if l.amount<0),ZERO)),('Custo do estoque atual',sum((d.cost for d in stock),ZERO)+sum((a.cost*a.quantity for a in accessories),ZERO)),('Fluxo de caixa no período',sum((l.amount for l in settled),ZERO))]
+    metrics=[('Faturamento no período',sum((s.total for s in sales),ZERO)),('Resultado das vendas',sum((s.profit for s in sales),ZERO)),('Despesas operacionais pagas',expenses),('Saldo de caixa atual',cash),('Contas a receber • total',sum((l.amount for l in pending if l.amount>0),ZERO)),('Contas a pagar • total',-sum((l.amount for l in pending if l.amount<0),ZERO)),('Custo do estoque atual',sum((d.cost for d in stock),ZERO)+sum((a.cost*a.quantity for a in accessories),ZERO)+sum((p.cost*p.quantity for p in parts),ZERO)),('Fluxo de caixa no período',sum((l.amount for l in settled),ZERO))]
+    delivered=list(ServiceOrder.objects.filter(status='delivered',inventory_device__isnull=True,delivered_at__date__gte=start,delivered_at__date__lte=end))
+    metrics += [('Serviços entregues no período',sum((o.total for o in delivered),ZERO)),('Resultado dos serviços',sum((o.result for o in delivered),ZERO))]
     warranties=[w for w in Warranty.objects.filter(item__sale__status='completed').select_related('item__device','item__sale') if w.expiry and today<=w.expiry<=today+timedelta(days=30)]
     return render(request,'core/dashboard.html',{'metrics':metrics,'count':len(sales),'stock_count':len(stock),'stale':[d for d in stock if d.entry_date<=today-timedelta(days=60)],'low':[a for a in accessories if a.quantity<=a.minimum],'warranties':warranties,'recent':sales[:6],'start':start,'end':end})
 
@@ -86,7 +89,7 @@ def person_new(request):
 @login_required
 def person_detail(request,pk):
     p=get_object_or_404(Person,pk=pk)
-    return render(request,'core/person.html',{'person':p,'sales':Sale.objects.filter(customer=p),'devices':Device.objects.filter(origin=p),'services':ServiceRecord.objects.filter(warranty__item__sale__customer=p).select_related('warranty__item__sale')})
+    return render(request,'core/person.html',{'person':p,'sales':Sale.objects.filter(customer=p),'devices':Device.objects.filter(origin=p),'quotes':Quote.objects.filter(customer=p),'orders':ServiceOrder.objects.filter(customer=p),'tasks':Task.objects.filter(person=p),'services':ServiceRecord.objects.filter(warranty__item__sale__customer=p).select_related('warranty__item__sale')})
 
 @login_required
 def devices(request):
@@ -118,6 +121,9 @@ def device_detail(request,pk):
 def device_status(request,pk):
     with transaction.atomic():
         d=get_object_or_404(Device.objects.select_for_update(),pk=pk)
+        if ServiceOrder.objects.filter(inventory_device=d,active=True).exists():
+            messages.error(request,'Encerre a OS vinculada antes de alterar o status deste aparelho.')
+            return redirect('device',pk)
         new=request.POST.get('status')
         if d.status not in ('available','reserved','maintenance') or new not in ('available','reserved','maintenance'): raise PermissionDenied
         old=d.status; d.status=new; d.save(update_fields=['status'])
@@ -159,20 +165,43 @@ def accessory_move(request,pk):
 def sales(request): return render(request,'core/sales.html',{'items':Sale.objects.select_related('customer','seller')[:200]})
 @login_required
 def sale_new(request):
-    form=SaleForm(request.POST or None,initial={'request_key':uuid.uuid4()})
-    lines=AccessoryLines(request.POST or None,prefix='acc')
+    initial={'request_key':uuid.uuid4()}
+    accessory_initial=[]
+    trade_initial={}
+    quote=None
+    if request.method=='GET' and request.GET.get('quote','').isdigit():
+        quote=get_object_or_404(Quote,pk=request.GET['quote'])
+        if quote.sale_id: return redirect('sale',quote.sale_id)
+        if quote.expired or quote.status=='cancelled':
+            messages.error(request,'Orçamento vencido ou cancelado. Gere uma nova proposta.')
+            return redirect('quote',quote.pk)
+        initial.update(customer=quote.customer_id,quote=quote.pk,discount=quote.discount,notes=quote.notes,devices=[i['id'] for i in quote.items if i['kind']=='device'])
+        accessory_initial=[{'accessory':i['id'],'quantity':i['quantity']} for i in quote.items if i['kind']=='accessory']
+    if request.method=='GET' and request.GET.get('valuation','').isdigit():
+        valuation=get_object_or_404(Valuation,pk=request.GET['valuation'])
+        initial['trade']=True
+        if valuation.person_id: initial['customer']=valuation.person_id
+        trade_initial={'model':valuation.snapshot['model'],'storage':valuation.snapshot['storage'],'acquisition_cost':valuation.suggested,'origin':valuation.person_id,'condition':'used','notes':f'Avaliação manual #{valuation.pk}. '+valuation.notes}
+    form=SaleForm(request.POST or None,initial=initial)
+    lines=AccessoryLines(request.POST or None,prefix='acc',initial=accessory_initial)
     payments=PaymentLines(request.POST or None,prefix='pay')
-    wants_trade=request.POST.get('trade')=='on'
-    trade_form=DeviceForm(request.POST if wants_trade else None,request.FILES if wants_trade else None,prefix='trade')
+    wants_trade=request.POST.get('trade')=='on' if request.method=='POST' else bool(initial.get('trade'))
+    trade_form=DeviceForm(request.POST if request.method=='POST' and wants_trade else None,request.FILES if wants_trade else None,prefix='trade',initial=trade_initial)
     if request.method=='POST':
         valid=form.is_valid(); valid_lines=lines.is_valid(); valid_pay=payments.is_valid(); valid_trade=trade_form.is_valid() if wants_trade else True
         if valid and valid_lines and valid_pay and valid_trade:
             try:
-                sale=complete_sale(customer=form.cleaned_data['customer'],devices=list(form.cleaned_data['devices']),accessories=[(f.cleaned_data['accessory'],f.cleaned_data['quantity']) for f in lines if f.cleaned_data.get('accessory')],discount=form.cleaned_data['discount'],payment_rows=[f.cleaned_data for f in payments if f.cleaned_data.get('method')],actor=request.user,request_key=form.cleaned_data['request_key'],trade_form=trade_form if wants_trade else None)
+                args=dict(customer=form.cleaned_data['customer'],devices=list(form.cleaned_data['devices']),accessories=[(f.cleaned_data['accessory'],f.cleaned_data['quantity']) for f in lines if f.cleaned_data.get('accessory')],discount=form.cleaned_data['discount'],payment_rows=[f.cleaned_data for f in payments if f.cleaned_data.get('method')],actor=request.user,request_key=form.cleaned_data['request_key'],trade_form=trade_form if wants_trade else None,channel=form.cleaned_data.get('channel') or 'store',notes=form.cleaned_data.get('notes',''))
+                if form.cleaned_data.get('quote'):
+                    from .workflows import sell_quote
+                    sale=sell_quote(form.cleaned_data['quote'].pk,**args)
+                else:
+                    sale=complete_sale(**args)
                 messages.success(request,'Venda concluída. Estoque, garantia e financeiro atualizados juntos.'); return redirect('sale',sale.pk)
             except ValidationError as e: form.add_error(None,e)
             except (IntegrityError,OperationalError): form.add_error(None,'Conflito de estoque, duplicidade ou operação simultânea. Recarregue e confira o histórico antes de tentar de novo.')
-    return render(request,'core/sale_form.html',{'form':form,'lines':lines,'payments':payments,'trade_form':trade_form,'wants_trade':wants_trade,'catalog':Device.objects.filter(status__in=['available','reserved']),'acc_catalog':Accessory.objects.all()})
+    price_data={'devices':{str(d.pk):{'label':str(d),'price':int(d.price*100)} for d in Device.objects.filter(status__in=['available','reserved'])},'accessories':{str(a.pk):{'label':a.name,'price':int(a.price*100)} for a in Accessory.objects.all()},'rates':{str(r.pk):int(r.percent*1000) for r in CardRate.objects.filter(active=True)}}
+    return render(request,'core/sale_form.html',{'form':form,'lines':lines,'payments':payments,'trade_form':trade_form,'wants_trade':wants_trade,'catalog':Device.objects.filter(status__in=['available','reserved']),'acc_catalog':Accessory.objects.all(),'price_data':price_data,'quote':quote})
 @login_required
 def sale_detail(request,pk):
     return render(request,'core/sale.html',{'sale':get_object_or_404(Sale.objects.select_related('customer','seller'),pk=pk)})
@@ -187,7 +216,17 @@ def sale_cancel(request,pk):
 
 @admin_required
 def finance(request):
-    return render(request,'core/finance.html',{'items':Ledger.objects.select_related('person','sale')[:300]})
+    items=Ledger.objects.select_related('person','sale','service_order','cash_session')
+    direction=request.GET.get('direction','')
+    status=request.GET.get('status','')
+    q=request.GET.get('q','').strip()
+    if direction=='in': items=items.filter(amount__gt=0)
+    if direction=='out': items=items.filter(amount__lt=0)
+    if status=='pending': items=items.filter(settled_date__isnull=True,voided=False)
+    if status=='settled': items=items.filter(settled_date__isnull=False,voided=False)
+    if status=='voided': items=items.filter(voided=True)
+    if q: items=items.filter(Q(label__icontains=q)|Q(person__name__icontains=q)|Q(category__icontains=q))
+    return render(request,'core/finance.html',{'items':items[:300],'methods':Ledger.METHODS,'direction':direction,'status':status,'q':q})
 @admin_required
 def ledger_new(request):
     form=LedgerForm(request.POST or None)
@@ -201,11 +240,12 @@ def ledger_new(request):
 @admin_required
 @require_POST
 def ledger_settle(request,pk):
-    with transaction.atomic():
-        line=get_object_or_404(Ledger.objects.select_for_update(),pk=pk)
-        if line.settled_date or line.voided: messages.error(request,'Lançamento já quitado ou anulado.')
-        else:
-            line.settled_date=timezone.localdate(); line.save(update_fields=['settled_date']); audit(request.user,'Quitação',line,{'valor':str(line.amount)})
+    from .workflows import settle_ledger
+    line=get_object_or_404(Ledger,pk=pk)
+    try:
+        settle_ledger(pk,request.POST.get('method') or line.method,request.user)
+    except ValidationError as exc:
+        messages.error(request,' '.join(exc.messages))
     return redirect('finance')
 @admin_required
 @require_POST
@@ -213,7 +253,7 @@ def ledger_reverse(request,pk):
     reason=request.POST.get('reason','').strip()
     with transaction.atomic():
         line=get_object_or_404(Ledger.objects.select_for_update(),pk=pk)
-        if line.sale_id or line.device_id or line.reverses_id or line.category=='Compra de estoque':
+        if line.sale_id or line.device_id or line.service_order_id or line.transfer_key or line.reverses_id or line.category=='Compra de estoque':
             messages.error(request,'Lançamento vinculado: use o cancelamento da venda; compras de estoque exigem conciliação manual por lançamento identificado.')
         elif not reason or line.voided or Ledger.objects.filter(reverses=line).exists(): messages.error(request,'Informe o motivo; este lançamento não pode ter sido anulado ou estornado.')
         else:
@@ -269,7 +309,7 @@ def modules(request): return render(request,'core/modules.html')
 def audit_view(request): return render(request,'core/audit.html',{'items':Audit.objects.select_related('actor')[:300],'moves':StockMove.objects.select_related('actor','device','accessory')[:100]})
 @admin_required
 def export_data(request):
-    classes=[Store,Person,Device,Identifier,DevicePhoto,Accessory,Sale,SaleItem,CardRate,Payment,Ledger,StockMove,Warranty,ServiceRecord,Audit]
+    classes=[Store,Person,Device,Identifier,DevicePhoto,Accessory,Sale,SaleItem,CardRate,Payment,Ledger,StockMove,Warranty,ServiceRecord,Audit,Quote,ValuationRule,Valuation,ServicePart,ServiceOrder,PartUse,PartMove,ServiceEvent,Task,CashSession]
     payload={m.__name__:json.loads(serializers.serialize('json',m.objects.all())) for m in classes}
     audit(request.user,'Exportação dos dados',request.user)
     response=HttpResponse(json.dumps(payload,ensure_ascii=False,indent=2),content_type='application/json')

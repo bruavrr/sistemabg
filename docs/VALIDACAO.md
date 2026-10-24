@@ -1,6 +1,6 @@
 # Validações executadas
 
-## Automatizadas
+## Verificações originais — primeira versão
 
 `python manage.py test --verbosity 1`: **24 testes passaram**, com banco de teste separado, sem inserir dados no banco da loja.
 
@@ -63,3 +63,14 @@ Não houve contratação, publicação, teste de domínio/TLS/Nginx em provedor 
 - Logo original: visível na conversa, mas sem arquivo acessível no workspace. Deve ser enviada em Configurações.
 - Taxas de cartão, dados da loja e termos precisam ser preenchidos/revisados pelo proprietário.
 - NF-e/SEFAZ, IMEI/Apple, mensagens e assinatura digital: não integrados. OS, orçamentos, catálogo e CRM completos: não implementados.
+
+## Atualização orientada pelo vídeo
+
+Foram adicionados testes em `core/test_operations.py`, totalizando **47 testes automatizados**. Além dos fluxos iniciais, são verificados orçamento sem baixar estoque, conversão uma única vez, preço/validade revalidados, recusa de adulteração de itens, conversão HTTP, cálculo inverso de cartão, centavos das parcelas, avaliação com parâmetros preservados e piso zero, autorização/limite de OS, consumo de peças, retorno físico confirmado, entrega sem duplicar contas, custo de manutenção interna sem receita fictícia, bloqueio de liberação manual de aparelho em OS, custo médio de peças, caixa apenas com dinheiro, sangria com contrapartida, reembolso efetivo, fechamento preservado, tarefa local de pós-venda, conclusão com resultado, edição de preço sem alterar documento anterior, todas as telas/documentos/relatórios novos, CSV protegido contra fórmulas e permissões dos novos endpoints.
+
+A análise visual do vídeo e o comparativo de escopo estão em `REFERENCIA-VIDEO.md`. Os limites da primeira versão descritos acima referentes a OS, orçamento e relatórios foram substituídos pelos módulos locais desta atualização; integrações externas continuam indisponíveis. O vídeo e registros de QA não fazem parte dos dados da loja ou do repositório.
+
+
+Na validação desta atualização em Chromium real e banco isolado, passaram: orçamento → PDV → venda com pagamentos combinados, resumo em centavos, inclusão de linhas adicionais, recebimento físico no caixa, recebimento de OS → diagnóstico → autorização → peça → reparo → entrega, cálculo inverso de cartão, avaliação manual, agenda, relatórios e PDFs de orçamento/OS. As telas verificadas a 390px não apresentaram vazamento horizontal da página; tabelas e Kanban têm rolagem própria. Nenhum erro JavaScript ocorreu nessa sequência.
+
+Foi restaurado um backup populado da versão inicial em diretório separado e aplicada a migração nova. Todos os valores das colunas originais foram comparados em todas as tabelas comerciais e de usuários: sem diferenças. `manage.py check`, verificação de migrações pendentes e `git diff --check` passaram. O banco principal permaneceu vazio, sem fixtures ou usuário de demonstração.

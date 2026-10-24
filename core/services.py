@@ -42,7 +42,7 @@ def create_device(form, actor, trade=False):
     return d
 
 @transaction.atomic
-def complete_sale(*, customer, devices, accessories, discount, payment_rows, actor, request_key, trade_form=None):
+def complete_sale(*, customer, devices, accessories, discount, payment_rows, actor, request_key, trade_form=None, channel="store", notes=""):
     existing = Sale.objects.filter(request_key=request_key).first()
     if existing: return existing
     device_ids = [d.pk for d in devices]
@@ -79,7 +79,7 @@ def complete_sale(*, customer, devices, accessories, discount, payment_rows, act
         prepared.append((row,rate,fee))
     st = store()
     trade = create_device(trade_form,actor,trade=True) if trade_form else None
-    sale = Sale.objects.create(customer=customer,seller=actor,gross=gross,discount=discount,costs=costs,fees=sum((p[2] for p in prepared),ZERO),trade_device=trade,trade_value=trade_value,request_key=request_key,terms_snapshot=st.warranty_terms,store_snapshot={'name':st.name,'document':st.document,'address':st.address,'phone':st.phone,'logo':st.logo.name},customer_snapshot={'name':customer.name,'document':customer.document,'phone':customer.phone,'address':customer.address})
+    sale = Sale.objects.create(customer=customer,seller=actor,channel=channel,notes=notes,gross=gross,discount=discount,costs=costs,fees=sum((p[2] for p in prepared),ZERO),trade_device=trade,trade_value=trade_value,request_key=request_key,terms_snapshot=st.warranty_terms,store_snapshot={'name':st.name,'document':st.document,'address':st.address,'phone':st.phone,'logo':st.logo.name},customer_snapshot={'name':customer.name,'document':customer.document,'phone':customer.phone,'address':customer.address})
     for d in selected:
         updated = Device.objects.filter(pk=d.pk,status__in=['available','reserved']).update(status='sold')
         if not updated: raise ValidationError('Aparelho vendido por outra operação. Recarregue a página.')
@@ -98,7 +98,13 @@ def complete_sale(*, customer, devices, accessories, discount, payment_rows, act
         installment = money(pay.net / count)
         for i in range(1,count+1):
             value = installment if i < count else pay.net - installment * (count-1)
-            Ledger.objects.create(sale=sale,person=customer,label=f'Venda #{sale.pk} • {pay.get_method_display()} {pay.machine} • {i}/{count}',category='Recebimento de venda',amount=value,due_date=today+timedelta(days=rate.days*i) if rate else today,settled_date=None if rate else today)
+            line = Ledger.objects.create(method=row['method'],sale=sale,person=customer,label=f'Venda #{sale.pk} • {pay.get_method_display()} {pay.machine} • {i}/{count}',category='Recebimento de venda',amount=value,due_date=today+timedelta(days=rate.days*i) if rate else today,settled_date=None if rate else today)
+            if row['method'] == 'cash':
+                from .workflows import attach_cash
+                attach_cash(line)
+                line.save(update_fields=['cash_session'])
+    if st.followup_days:
+        Task.objects.create(title=f'Pós-venda #{sale.pk} • {customer.name}',kind='after_sale',person=customer,sale=sale,when=timezone.now()+timedelta(days=st.followup_days),actor=actor)
     audit(actor,'Venda concluída',sale,{'total':str(sale.total),'resultado':str(sale.profit)})
     return sale
 
@@ -125,6 +131,7 @@ def cancel_sale(sale_id, reason, actor):
             Ledger.objects.create(label=f'Estorno: {line.label}',category='Estorno',amount=-line.amount,due_date=today,settled_date=None,person=line.person,sale=sale,reverses=line)
         else:
             line.voided=True; line.save(update_fields=['voided'])
+    Task.objects.filter(sale=sale,completed_at__isnull=True).update(cancelled=True)
     sale.status='cancelled'; sale.cancelled_at=timezone.now(); sale.cancel_reason=reason; sale.save(update_fields=['status','cancelled_at','cancel_reason'])
     audit(actor,'Venda cancelada',sale,{'motivo':reason})
     return sale

@@ -10,3 +10,10 @@ def times(a,b): return a*b
 @register.filter
 def check_label(value):
     return {'unchecked':'Não verificado','ok':'Verificado / aprovado','issue':'Problema / restrição','na':'Não se aplica'}.get(value,value)
+
+@register.filter
+def as_decimal(value):
+    try:
+        return Decimal(value)
+    except Exception:
+        return Decimal('0')

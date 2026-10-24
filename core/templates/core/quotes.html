@@ -1,0 +1,7 @@
+{% extends 'core/base.html' %}{% load bg %}{% block title %}Orçamentos{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">PROPOSTAS DA LOJA</p><h1>Orçamentos</h1><p class="muted">Propostas independentes, sem baixar estoque ou gerar receita.</p></div><a class="button" href="{% url 'quote_new' %}">＋ Novo orçamento</a></div>
+<section class="panel table-wrap"><table><thead><tr><th>Proposta</th><th>Cliente</th><th>Validade</th><th>Total</th><th>Situação</th><th>Venda</th></tr></thead><tbody>
+{% for q in items %}<tr><td><a href="{% url 'quote' q.pk %}">#{{ q.pk }}</a></td><td>{{ q.customer }}</td><td>{{ q.valid_until|date:'d/m/Y' }}{% if q.expired and not q.sale %}<small>Vencido</small>{% endif %}</td><td>{{ q.total|brl }}</td><td>{{ q.get_status_display }}</td><td>{% if q.sale %}<a href="{% url 'sale' q.sale_id %}">#{{ q.sale_id }}</a>{% else %}—{% endif %}</td></tr>
+{% empty %}<tr><td colspan="6"><div class="empty"><h3>Nenhum orçamento</h3><p>Monte uma proposta com os produtos reais do estoque.</p></div></td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

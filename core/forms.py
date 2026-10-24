@@ -20,7 +20,7 @@ def validate_upload(f):
 class PersonForm(BaseModelForm):
     class Meta:
         model=Person
-        fields=['name','kind','document','phone','email','address']
+        fields=['name','kind','document','phone','email','birth_date','address']
     def clean_document(self):
         value=re.sub(r'\D','',self.cleaned_data['document'])
         if not value: return ''
@@ -65,6 +65,10 @@ class AccessoryForm(BaseModelForm):
         model=Accessory
         fields=['name','category','compatibility','supplier','cost','price','quantity','minimum']
 class SaleForm(forms.Form):
+    field_order=["customer","devices","discount","channel","notes","trade","request_key","quote"]
+    quote=forms.ModelChoiceField(Quote.objects.all(),required=False,widget=forms.HiddenInput)
+    channel=forms.ChoiceField(label="Canal de origem (registro manual)",choices=Sale.CHANNELS,required=False,initial="store")
+    notes=forms.CharField(label="Observações da venda",widget=forms.Textarea(attrs={"rows":2}),required=False,max_length=5000)
     customer=forms.ModelChoiceField(Person.objects.all(),label='Cliente')
     devices=forms.ModelMultipleChoiceField(Device.objects.filter(status__in=['available','reserved']),required=False,label='Aparelhos (Ctrl/Cmd para selecionar vários)')
     discount=forms.DecimalField(label='Desconto total (R$)',max_digits=14,decimal_places=2,min_value=0,initial=0)
@@ -107,7 +111,7 @@ class CardRateForm(BaseModelForm):
 class StoreForm(BaseModelForm):
     class Meta:
         model=Store
-        fields=['name','document','address','phone','logo','warranty_terms']
+        fields=['name','document','address','phone','logo','followup_days','warranty_terms']
         widgets={'warranty_terms':forms.Textarea(attrs={'rows':7})}
     clean_logo=lambda self:validate_upload(self.cleaned_data.get('logo'))
 class WarrantyForm(BaseModelForm):

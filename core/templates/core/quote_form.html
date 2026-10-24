@@ -1,0 +1,5 @@
+{% extends 'core/base.html' %}{% block title %}Novo orçamento{% endblock %}{% block content %}
+<div class="page-head"><div><p class="eyebrow">PRÉ-VENDA</p><h1>Novo orçamento</h1></div><a class="button secondary" href="{% url 'quotes' %}">Voltar</a></div>
+<p class="note">Os preços ficam registrados na proposta. Orçamento não reserva produtos, não recebe pagamentos e não altera o financeiro. Na conversão, estoque e preços são novamente conferidos.</p>
+<form method="post">{% csrf_token %}<section class="panel">{{ form.as_p }}</section><section class="panel"><h2>Acessórios</h2>{{ lines.management_form }}{{ lines.non_form_errors }}{% for line in lines %}<div class="form-row">{{ line.as_p }}</div>{% endfor %}</section><button class="button">Salvar proposta</button></form>
+{% endblock %}
