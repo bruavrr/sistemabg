@@ -15,7 +15,7 @@ from .services import audit, store, money, complete_sale
 def snapshots(customer):
     st = store()
     return (
-        {'name': customer.name, 'document': customer.document, 'phone': customer.phone, 'address': customer.address},
+        {'name': customer.name, 'document': customer.document, 'phone': customer.phone, 'address': customer.address, 'discovery_source': customer.discovery_source, 'discovery_details': customer.discovery_details},
         {'name': st.name, 'document': st.document, 'phone': st.phone, 'address': st.address, 'logo': st.logo.name},
     )
 

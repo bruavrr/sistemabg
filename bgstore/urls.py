@@ -47,3 +47,10 @@ urlpatterns += [
     path('aparelhos/<int:pk>/editar/', op.device_edit, name='device_edit'),
     path('imprimir/<str:kind>/<int:pk>/', op.operations_document, name='operations_document'),
 ]
+
+from core import quick_views as quick
+urlpatterns += [
+    path('vendas/cadastro/<str:kind>/', quick.quick_create, name='quick_create'),
+    path('configuracoes/logo/', quick.logo_upload, name='logo_upload'),
+    path('marca/logo/', quick.brand_logo, name='brand_logo'),
+]

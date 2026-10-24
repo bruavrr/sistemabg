@@ -1,10 +1,42 @@
-{% extends 'core/base.html' %}{% load bg %}{% block title %}Nova venda{% endblock %}{% block content %}<div class="page-head"><div><p class="eyebrow">VENDAS E UPGRADES</p><h1>Nova venda</h1><p class="muted">Produtos, troca e pagamentos em uma única operação.</p></div><a class="button secondary" href="{% url 'sales' %}">Voltar</a></div><p class="note">Cadastre o cliente e os produtos antes de vender. Os preços são os do cadastro; informe o desconto total. O sistema só conclui quando os pagamentos mais a avaliação da troca fecham o valor da venda.</p><details class="panel"><summary>Consultar preços e estoque disponíveis</summary><div class="table-wrap"><table><thead><tr><th>Produto</th><th>Preço</th></tr></thead><tbody>{% for d in catalog %}<tr><td>{{ d }}</td><td>{{ d.price|brl }}</td></tr>{% endfor %}{% for a in acc_catalog %}<tr><td>{{ a }}</td><td>{{ a.price|brl }}</td></tr>{% endfor %}</tbody></table></div></details>{{ price_data|json_script:"sale-prices" }}
-{% if quote %}<p class="note">Conversão do orçamento #{{ quote.pk }}. Produtos, cliente, preços e desconto serão conferidos no servidor antes da conclusão.</p>{% endif %}
-<div class="pdv-summary" role="status" aria-live="polite">
-<article><span>Produtos</span><strong id="pdv-gross">R$ 0,00</strong></article>
-<article><span>Total após desconto</span><strong id="pdv-total">R$ 0,00</strong></article>
-<article><span>Avaliação da troca</span><strong id="pdv-trade">R$ 0,00</strong></article>
-<article><span>Pagamentos informados</span><strong id="pdv-paid">R$ 0,00</strong></article>
-<article><span>Falta pagar</span><strong id="pdv-balance">R$ 0,00</strong></article>
-</div><section class="panel"><h2>Itens selecionados</h2><ul id="cart-preview"><li>Selecione os produtos abaixo.</li></ul><p class="muted small">Taxas estimadas: <b id="pdv-fee">R$ 0,00</b> · Líquido dos pagamentos: <b id="pdv-net">R$ 0,00</b>. O servidor confirma todos os valores. Troco automático não é aceito: informe o valor efetivo de cada pagamento.</p></section>
-<form method="post" enctype="multipart/form-data" id="sale-form">{% csrf_token %}<section class="panel"><h2>01 · Cliente e aparelhos</h2>{{ form.non_field_errors }}{{ form.request_key }}{{ form.request_key.errors }}{{ form.quote }}{{ form.quote.errors }}<div class="form-grid">{% for field in form %}{% if not field.is_hidden %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}</div></section><section class="panel"><h2>02 · Acessórios</h2><p class="muted">Deixe as linhas não utilizadas em branco.</p>{{ lines.management_form }}{{ lines.non_form_errors }}{% for line in lines %}<div class="form-row accessory-row">{{ line.as_p }}</div>{% endfor %}<div id="accessory-extra"></div><button type="button" class="button secondary" data-add-row="acc">＋ Outra linha de acessório</button></section><section class="panel"><h2>03 · Pagamentos</h2><p class="muted">Combine Pix, dinheiro e cartão. Pix e dinheiro entram no caixa na conclusão. Cartão gera contas a receber pelo valor líquido; a quitação é feita no financeiro.</p>{{ payments.management_form }}{{ payments.non_form_errors }}{% for payment in payments %}<div class="form-row payment-row">{{ payment.as_p }}</div>{% endfor %}<div id="payment-extra"></div><button type="button" class="button secondary" data-add-row="pay">＋ Outra forma de pagamento</button></section><section class="panel trade-panel" id="trade-panel"><h2>04 · Aparelho recebido na troca</h2><p class="note">Preencha somente se marcou a opção de troca acima. O valor de aquisição é a avaliação creditada ao cliente. A origem deve ser o cliente da venda. O aparelho recebido entra no estoque junto com a conclusão da venda.</p>{{ trade_form.non_field_errors }}<div class="form-grid">{% for field in trade_form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></section><div class="form-actions sticky-actions"><button class="button">Concluir venda e atualizar estoque →</button><span class="muted">Revise os dados. A conclusão gera registros financeiros.</span></div></form><template id="acc-empty"><div class="form-row accessory-row">{{ lines.empty_form.as_p }}</div></template><template id="pay-empty"><div class="form-row payment-row">{{ payments.empty_form.as_p }}</div></template>{% endblock %}
+{% extends 'core/base.html' %}{% load bg %}{% block title %}Nova venda{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">COMERCIAL / NOVA VENDA</p><h1>Vamos fazer uma venda<span class="gold">.</span></h1><p class="muted">Cliente, produtos e pagamento. Tudo por aqui.</p></div><a class="button secondary" href="{% url 'sales' %}">Ver vendas</a></div>
+{{ price_data|json_script:'sale-prices' }}{{ customer_data|json_script:'customer-data' }}
+<div id="sale-notice" role="status" aria-live="polite" hidden></div>
+{% if form.quote.value %}<p class="note">Esta venda está vinculada a um orçamento. Mantenha o cliente, produtos e desconto da proposta; novos cadastros estão disponíveis nas vendas sem orçamento vinculado.</p>{% endif %}
+<form method="post" enctype="multipart/form-data" id="sale-form">
+{% csrf_token %}{{ form.request_key }}{{ form.request_key.errors }}{{ form.quote }}{{ form.quote.errors }}{{ form.non_field_errors }}
+<div class="sale-layout"><div class="sale-sections">
+<section class="panel sale-section" id="customer-section">
+<div class="section-heading"><div><span class="step-number">01</span><h2>Quem está comprando?</h2></div><button type="button" class="button secondary" data-open-dialog="quick-customer-dialog" {% if form.quote.value %}disabled{% endif %}>＋ Cadastrar cliente</button></div>
+<div class="field">{{ form.customer.label_tag }}{{ form.customer }}{{ form.customer.errors }}</div>
+<div id="customer-preview" class="customer-preview" hidden></div>
+<p class="section-help">Primeira compra? Cadastre o cliente aqui, sem sair da venda.</p>
+</section>
+<section class="panel sale-section" id="product-section">
+<div class="section-heading"><div><span class="step-number">02</span><h2>O que vamos vender?</h2></div><div class="actions"><button type="button" class="button secondary" data-open-dialog="quick-device-dialog" {% if form.quote.value %}disabled{% endif %}>＋ Cadastrar aparelho</button>{% if is_admin %}<button type="button" class="button secondary" data-open-dialog="quick-accessory-dialog" {% if form.quote.value %}disabled{% endif %}>＋ Cadastrar acessório</button>{% endif %}</div></div>
+<div class="field device-picker"><label for="device-search">Buscar aparelho no estoque</label><input type="search" id="device-search" placeholder="Modelo, armazenamento ou IMEI" autocomplete="off"><div class="device-options">{{ form.devices }}</div>{{ form.devices.errors }}<p id="device-empty" class="section-help" {% if catalog %}hidden{% endif %}>Nenhum aparelho disponível. Você pode cadastrar uma entrada pelo botão acima.</p></div>
+<div class="accessory-heading"><h3>Acessórios</h3><span>Combine com os aparelhos na mesma venda.</span></div>
+{{ lines.management_form }}{{ lines.non_form_errors }}
+{% for line in lines %}<div class="form-row accessory-row">{{ line.as_p }}</div>{% endfor %}
+<div id="accessory-extra"></div><button type="button" class="text-action" data-add-row="acc">＋ Adicionar linha de acessório</button>
+</section>
+<section class="panel sale-section">
+<div class="section-heading"><div><span class="step-number">03</span><h2>Condições da venda</h2></div></div>
+<div class="form-grid"><div class="field">{{ form.discount.label_tag }}{{ form.discount }}{{ form.discount.errors }}</div><div class="field">{{ form.channel.label_tag }}{{ form.channel }}{{ form.channel.errors }}</div><div class="field">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div></div>
+<div class="trade-toggle">{{ form.trade }}{{ form.trade.label_tag }}{{ form.trade.errors }}</div>
+<div class="trade-panel" id="trade-panel"><h3>Aparelho recebido em troca</h3><p class="note">A avaliação é creditada ao cliente. A origem deve ser o cliente desta venda. O aparelho recebido só entra no estoque quando a venda é concluída.</p>{{ trade_form.non_field_errors }}<div class="form-grid">{% for field in trade_form %}<div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div></div>
+</section>
+<section class="panel sale-section">
+<div class="section-heading"><div><span class="step-number">04</span><h2>Como será o pagamento?</h2></div></div><p class="section-help">Combine as formas de pagamento. Pix e dinheiro entram no financeiro na conclusão; cartão gera recebimentos previstos líquidos das taxas cadastradas.</p>
+{{ payments.management_form }}{{ payments.non_form_errors }}{% for payment in payments %}<div class="form-row payment-row">{{ payment.as_p }}</div>{% endfor %}
+<div id="payment-extra"></div><button type="button" class="text-action" data-add-row="pay">＋ Adicionar forma de pagamento</button>
+</section></div>
+<aside class="sale-summary"><div class="summary-heading"><span>BG STORE</span><h2>Resumo da venda</h2></div><ul id="cart-preview"><li>Selecione os produtos para começar.</li></ul>
+<div class="summary-numbers" role="status" aria-live="polite"><div><span>Produtos</span><strong id="pdv-gross">R$ 0,00</strong></div><div class="summary-total"><span>Total após desconto</span><strong id="pdv-total">R$ 0,00</strong></div><div><span>Avaliação da troca</span><strong id="pdv-trade">R$ 0,00</strong></div><div><span>Pagamentos</span><strong id="pdv-paid">R$ 0,00</strong></div><div class="summary-balance"><span>Falta pagar</span><strong id="pdv-balance">R$ 0,00</strong></div></div>
+<div class="summary-fees"><span>Taxas estimadas <b id="pdv-fee">R$ 0,00</b></span><span>Líquido dos pagamentos <b id="pdv-net">R$ 0,00</b></span></div>
+<button class="button full" type="submit">Concluir venda →</button><p class="section-help">O servidor confere os valores e o estoque. Informe o valor efetivo de cada pagamento, sem troco automático.</p></aside></div>
+</form>
+<template id="acc-empty"><div class="form-row accessory-row">{{ lines.empty_form.as_p }}</div></template><template id="pay-empty"><div class="form-row payment-row">{{ payments.empty_form.as_p }}</div></template>
+{% include 'core/partials/quick_dialogs.html' %}
+{% endblock %}

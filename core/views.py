@@ -184,7 +184,9 @@ def sale_new(request):
         trade_initial={'model':valuation.snapshot['model'],'storage':valuation.snapshot['storage'],'acquisition_cost':valuation.suggested,'origin':valuation.person_id,'condition':'used','notes':f'Avaliação manual #{valuation.pk}. '+valuation.notes}
     form=SaleForm(request.POST or None,initial=initial)
     lines=AccessoryLines(request.POST or None,prefix='acc',initial=accessory_initial)
+    lines.extra=1
     payments=PaymentLines(request.POST or None,prefix='pay')
+    payments.extra=2
     wants_trade=request.POST.get('trade')=='on' if request.method=='POST' else bool(initial.get('trade'))
     trade_form=DeviceForm(request.POST if request.method=='POST' and wants_trade else None,request.FILES if wants_trade else None,prefix='trade',initial=trade_initial)
     if request.method=='POST':
@@ -200,8 +202,10 @@ def sale_new(request):
                 messages.success(request,'Venda concluída. Estoque, garantia e financeiro atualizados juntos.'); return redirect('sale',sale.pk)
             except ValidationError as e: form.add_error(None,e)
             except (IntegrityError,OperationalError): form.add_error(None,'Conflito de estoque, duplicidade ou operação simultânea. Recarregue e confira o histórico antes de tentar de novo.')
-    price_data={'devices':{str(d.pk):{'label':str(d),'price':int(d.price*100)} for d in Device.objects.filter(status__in=['available','reserved'])},'accessories':{str(a.pk):{'label':a.name,'price':int(a.price*100)} for a in Accessory.objects.all()},'rates':{str(r.pk):int(r.percent*1000) for r in CardRate.objects.filter(active=True)}}
-    return render(request,'core/sale_form.html',{'form':form,'lines':lines,'payments':payments,'trade_form':trade_form,'wants_trade':wants_trade,'catalog':Device.objects.filter(status__in=['available','reserved']),'acc_catalog':Accessory.objects.all(),'price_data':price_data,'quote':quote})
+    price_data={'devices':{str(d.pk):{'label':f'{d} · IMEI {d.imei1}','price':int(d.price*100)} for d in Device.objects.filter(status__in=['available','reserved'])},'accessories':{str(a.pk):{'label':a.name,'price':int(a.price*100)} for a in Accessory.objects.all()},'rates':{str(r.pk):int(r.percent*1000) for r in CardRate.objects.filter(active=True)}}
+    from .quick_forms import QuickCustomerForm, QuickDeviceForm, QuickAccessoryForm
+    quick_forms={'quick_customer':QuickCustomerForm(prefix='quick-customer'),'quick_device':QuickDeviceForm(prefix='quick-device'),'quick_accessory':QuickAccessoryForm(prefix='quick-accessory')}
+    return render(request,'core/sale_form.html',{'form':form,'lines':lines,'payments':payments,'trade_form':trade_form,'wants_trade':wants_trade,'catalog':Device.objects.filter(status__in=['available','reserved']),'acc_catalog':Accessory.objects.all(),'price_data':price_data,'quote':quote,'customer_data':{str(p.pk):{'document':p.document,'email':p.email,'phone':p.phone,'discovery_label':p.get_discovery_source_display()} for p in Person.objects.all()},**quick_forms})
 @login_required
 def sale_detail(request,pk):
     return render(request,'core/sale.html',{'sale':get_object_or_404(Sale.objects.select_related('customer','seller'),pk=pk)})

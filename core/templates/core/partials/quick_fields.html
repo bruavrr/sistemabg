@@ -1,0 +1,10 @@
+{{ quick_form.non_field_errors }}
+{% for field in quick_form %}
+{% if field.is_hidden %}{{ field }}{% else %}
+<div class="field" data-quick-field="{{ field.name }}">
+{{ field.label_tag }}{{ field }}
+<div class="field-feedback" data-error-for="{{ field.name }}"></div>
+{% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+</div>
+{% endif %}
+{% endfor %}

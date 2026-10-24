@@ -79,7 +79,7 @@ def complete_sale(*, customer, devices, accessories, discount, payment_rows, act
         prepared.append((row,rate,fee))
     st = store()
     trade = create_device(trade_form,actor,trade=True) if trade_form else None
-    sale = Sale.objects.create(customer=customer,seller=actor,channel=channel,notes=notes,gross=gross,discount=discount,costs=costs,fees=sum((p[2] for p in prepared),ZERO),trade_device=trade,trade_value=trade_value,request_key=request_key,terms_snapshot=st.warranty_terms,store_snapshot={'name':st.name,'document':st.document,'address':st.address,'phone':st.phone,'logo':st.logo.name},customer_snapshot={'name':customer.name,'document':customer.document,'phone':customer.phone,'address':customer.address})
+    sale = Sale.objects.create(customer=customer,seller=actor,channel=channel,notes=notes,gross=gross,discount=discount,costs=costs,fees=sum((p[2] for p in prepared),ZERO),trade_device=trade,trade_value=trade_value,request_key=request_key,terms_snapshot=st.warranty_terms,store_snapshot={'name':st.name,'document':st.document,'address':st.address,'phone':st.phone,'logo':st.logo.name},customer_snapshot={'name':customer.name,'document':customer.document,'phone':customer.phone,'address':customer.address,'discovery_source':customer.discovery_source,'discovery_details':customer.discovery_details})
     for d in selected:
         updated = Device.objects.filter(pk=d.pk,status__in=['available','reserved']).update(status='sold')
         if not updated: raise ValidationError('Aparelho vendido por outra operação. Recarregue a página.')

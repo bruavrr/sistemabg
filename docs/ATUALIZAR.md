@@ -1,6 +1,6 @@
 # Atualizar a BG Store que já está no seu computador
 
-Esta atualização acrescenta orçamentos, resumo de PDV, OS/peças, caixa físico, agenda, relatórios e simuladores. É preciso atualizar os arquivos **e aplicar a migração do banco**; apenas recarregar o navegador não instala a versão nova.
+A versão atual inclui orçamentos, PDV, OS/peças, caixa físico, agenda, relatórios e simuladores. A atualização mais recente também acrescenta cadastros de cliente e produtos dentro da venda, “como conheceu a BG Store”, uma nova interface e envio da logo pelo menu. É preciso atualizar os arquivos **e aplicar a migração do banco**; apenas recarregar o navegador não instala a versão nova.
 
 ## Mac — versão baixada por ZIP
 
@@ -42,3 +42,5 @@ Siga os mesmos passos de preservação e nova pasta. Nos comandos, use `py -3.12
 - Abra um caixa físico com o dinheiro que você realmente contou antes de registrar novas vendas em dinheiro.
 - Aplique os fluxos de aprovação e estoque na OS; manutenção interna e serviço ao cliente têm tratamento financeiro distinto.
 - A atualização não configura integração fiscal, mensagens, Apple, IMEI ou assinatura digital.
+
+Após aplicar as migrações desta versão, abra Nova venda e use os botões de cadastro. O navegador deve carregar o visual novo; se ainda mostrar o antigo, use Command+Shift+R no Mac (ou Ctrl+F5 no Windows). Não é necessário criar outro usuário quando a pasta `data` foi preservada.

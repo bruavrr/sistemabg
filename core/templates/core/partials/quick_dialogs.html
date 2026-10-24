@@ -1,0 +1,27 @@
+<dialog id="quick-customer-dialog" class="quick-dialog" aria-labelledby="quick-customer-title">
+<div class="dialog-heading"><div><p class="eyebrow">CADASTRO NA VENDA</p><h2 id="quick-customer-title">Novo cliente</h2><p>Cadastre, selecione e continue de onde parou.</p></div><button type="button" class="icon-button" data-close-dialog aria-label="Fechar cadastro de cliente">✕</button></div>
+<form action="{% url 'quick_create' 'customer' %}" method="post" data-quick-form="customer" class="dialog-form">
+{% csrf_token %}<div class="quick-status" role="status" aria-live="polite"></div>
+<div class="form-grid">{% include 'core/partials/quick_fields.html' with quick_form=quick_customer %}</div>
+<p class="form-disclosure">Ao salvar, o cliente é cadastrado na loja e selecionado nesta venda. Cancelar a venda não exclui o contato.</p>
+<div class="dialog-actions"><button type="button" class="button secondary" data-close-dialog>Voltar à venda</button><button class="button" type="submit">Cadastrar e selecionar cliente</button></div>
+</form></dialog>
+
+<dialog id="quick-device-dialog" class="quick-dialog wide-dialog" aria-labelledby="quick-device-title">
+<div class="dialog-heading"><div><p class="eyebrow">CADASTRO NA VENDA</p><h2 id="quick-device-title">Cadastrar aparelho</h2><p>Faça a entrada no estoque e inclua na venda.</p></div><button type="button" class="icon-button" data-close-dialog aria-label="Fechar cadastro de aparelho">✕</button></div>
+<form action="{% url 'quick_create' 'device' %}" method="post" enctype="multipart/form-data" data-quick-form="device" class="dialog-form">
+{% csrf_token %}<div class="quick-status" role="status" aria-live="polite"></div>
+<p class="note">Esta é uma entrada por compra. Informe a origem real e os custos. A compra gera conta a pagar; não confirma pagamento. Para aparelho recebido do cliente em troca, use a seção de troca da própria venda.</p>
+<div class="form-grid">{% include 'core/partials/quick_fields.html' with quick_form=quick_device %}</div>
+<p class="form-disclosure">O aparelho será cadastrado no estoque mesmo se você não concluir a venda. IMEIs e série são conferidos no servidor. O checklist é manual.</p>
+<div class="dialog-actions"><button type="button" class="button secondary" data-close-dialog>Voltar à venda</button><button class="button" type="submit">Cadastrar e incluir aparelho</button></div>
+</form></dialog>
+{% if is_admin %}
+<dialog id="quick-accessory-dialog" class="quick-dialog" aria-labelledby="quick-accessory-title">
+<div class="dialog-heading"><div><p class="eyebrow">CADASTRO NA VENDA</p><h2 id="quick-accessory-title">Cadastrar acessório</h2><p>Produto, fornecedor, custo, preço e quantidade.</p></div><button type="button" class="icon-button" data-close-dialog aria-label="Fechar cadastro de acessório">✕</button></div>
+<form action="{% url 'quick_create' 'accessory' %}" method="post" data-quick-form="accessory" class="dialog-form">
+{% csrf_token %}<div class="quick-status" role="status" aria-live="polite"></div>
+<div class="form-grid">{% include 'core/partials/quick_fields.html' with quick_form=quick_accessory %}</div>
+<p class="form-disclosure">A quantidade entra no estoque e a compra gera conta a pagar. Uma unidade será selecionada na venda. O produto permanece cadastrado se a venda não for concluída.</p>
+<div class="dialog-actions"><button type="button" class="button secondary" data-close-dialog>Voltar à venda</button><button class="button" type="submit">Cadastrar e incluir acessório</button></div>
+</form></dialog>{% endif %}

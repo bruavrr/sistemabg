@@ -20,7 +20,7 @@ def validate_upload(f):
 class PersonForm(BaseModelForm):
     class Meta:
         model=Person
-        fields=['name','kind','document','phone','email','birth_date','address']
+        fields=['name','kind','document','phone','email','discovery_source','discovery_details','birth_date','address']
     def clean_document(self):
         value=re.sub(r'\D','',self.cleaned_data['document'])
         if not value: return ''
@@ -70,10 +70,14 @@ class SaleForm(forms.Form):
     channel=forms.ChoiceField(label="Canal de origem (registro manual)",choices=Sale.CHANNELS,required=False,initial="store")
     notes=forms.CharField(label="Observações da venda",widget=forms.Textarea(attrs={"rows":2}),required=False,max_length=5000)
     customer=forms.ModelChoiceField(Person.objects.all(),label='Cliente')
-    devices=forms.ModelMultipleChoiceField(Device.objects.filter(status__in=['available','reserved']),required=False,label='Aparelhos (Ctrl/Cmd para selecionar vários)')
+    devices=forms.ModelMultipleChoiceField(Device.objects.filter(status__in=['available','reserved']),required=False,label='Aparelhos disponíveis',widget=forms.CheckboxSelectMultiple)
     discount=forms.DecimalField(label='Desconto total (R$)',max_digits=14,decimal_places=2,min_value=0,initial=0)
     trade=forms.BooleanField(label='Esta venda inclui aparelho recebido em troca',required=False)
     request_key=forms.UUIDField(widget=forms.HiddenInput)
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        from .templatetags.bg import brl
+        self.fields['devices'].label_from_instance=lambda device:f'{device} · IMEI {device.imei1} · {brl(device.price)}'
 class AccessoryLine(forms.Form):
     accessory=forms.ModelChoiceField(Accessory.objects.all(),label='Acessório',required=False)
     quantity=forms.IntegerField(label='Quantidade',min_value=1,required=False)

@@ -19,6 +19,9 @@ class Store(models.Model):
     warranty_terms = models.TextField('Minuta dos termos de garantia', default='MINUTA PARA REVISÃO ANTES DO USO. A BG Store oferece nove meses de garantia para aparelhos seminovos, contados da data da venda. Para aparelhos lacrados, a garantia de um ano é oferecida pelo fabricante Apple, sujeita à verificação da cobertura e de suas datas. A cobertura Apple não foi confirmada por este sistema. Este documento não afasta os direitos legais do consumidor. Descreva aqui, após revisão profissional, o procedimento de atendimento e as condições aplicáveis.')
 
 class Person(models.Model):
+    DISCOVERY = [('instagram','Instagram'),('whatsapp','WhatsApp'),('google','Google'),('referral','Indicação'),('walk_in','Passou pela loja'),('returning','Já era cliente'),('other','Outro')]
+    discovery_source = models.CharField('Como conheceu a BG Store?', max_length=20, choices=DISCOVERY, blank=True)
+    discovery_details = models.CharField('Detalhes da indicação / outro canal', max_length=200, blank=True)
     name = models.CharField('Nome', max_length=150)
     kind = models.CharField('Tipo', max_length=12, choices=[('customer','Cliente'),('supplier','Fornecedor'),('both','Ambos')], default='customer')
     document = models.CharField('CPF/CNPJ (opcional)', max_length=14, blank=True)
@@ -394,3 +397,12 @@ class CashSession(models.Model):
     @property
     def difference(self):
         return self.counted - self.expected if self.counted is not None else None
+
+
+class QuickCreation(models.Model):
+    """Impede duplicar um cadastro rápido quando a mesma solicitação é repetida."""
+    request_key = models.UUIDField(unique=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    kind = models.CharField(max_length=15)
+    object_id = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)

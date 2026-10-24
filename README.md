@@ -1,6 +1,6 @@
 # BG Store
 
-Sistema web de gestão de uma loja de iPhones. Python + Django 5.2 LTS, SQLite persistente, interface responsiva em preto, dourado e branco. Começa vazio, sem clientes, aparelhos, vendas ou senhas padrão.
+Sistema web de gestão de uma loja de iPhones. Python + Django 5.2 LTS, SQLite persistente, interface responsiva com navegação azul profundo, áreas claras e detalhes dourados da BG Store. Começa vazio, sem clientes, aparelhos, vendas ou senhas padrão.
 
 **Primeiro acesso:** siga [LEIA-ME — abrir no computador](docs/COMECE-AQUI.md).
 
@@ -9,7 +9,8 @@ Sistema web de gestão de uma loja de iPhones. Python + Django 5.2 LTS, SQLite p
 - Login com senha criptografada, CSRF, sessões, limitação de tentativas (5 por usuário em 15 minutos), administrador e vendedor com verificações no servidor.
 - Aparelhos individuais com IMEIs únicos entre ambos os slots, série única, fotos, nota fiscal de origem anexada, custo, despesas de entrada, preço, procedência e checklist manual.
 - Compra gera conta a pagar. Troca/upgrade é concluída junto da venda e recebe avaliação como crédito, sem criar pagamento fictício da aquisição.
-- Clientes/fornecedores com validação de CPF/CNPJ opcional e histórico de vendas, entradas, documentos e atendimentos.
+- Clientes/fornecedores com validação de CPF/CNPJ opcional, origem de descoberta (como conheceu a BG Store) e histórico de vendas, entradas, documentos e atendimentos.
+- Na própria Nova venda: cadastrar cliente, aparelho e acessório em janelas, salvar no servidor e selecionar sem perder dados ou arquivos do formulário. CPF duplicado oferece selecionar o contato existente; a repetição da mesma solicitação não duplica o cadastro. Acessórios continuam restritos ao administrador. Entradas de compra exigem origem real; é possível cadastrar fornecedor pelo nome na mesma janela.
 - Acessórios com quantidade, mínimo, reposição, custo médio ponderado e movimentações com histórico.
 - Venda de vários aparelhos e acessórios, desconto total, Pix, dinheiro e cartão combinados. Preço vem do cadastro. Taxas de cartão não vêm preenchidas: cadastre as contratadas. Parcelas têm previsão de recebimento, não confirmação bancária.
 - Transações atômicas, atualização condicional de estoque, restrição de venda ativa por aparelho e chave de idempotência no formulário de venda.
@@ -71,17 +72,19 @@ Os testes usam banco isolado temporário. Nunca carregam registros fictícios no
 - `core/forms.py`: validação dos formulários e anexos (até 8 MB por arquivo).
 - `core/views.py`: autenticação, permissões e fluxos HTTP.
 - `core/templates/`, `core/static/`: interface e documentos, sem dependências de CDN.
-- `core/tests.py`, `core/test_operations.py`: 47 testes automatizados dos fluxos essenciais e proteções.
+- `core/tests.py`, `core/test_operations.py`: 62 testes automatizados dos fluxos essenciais e proteções.
 - `core/management/commands/`: usuários, backup e restauração.
 - `docs/HOSPEDAGEM.md`: preparação para hospedagem, sem contratação ou publicação.
 - `docs/BACKUP.md`: recuperação passo a passo.
 
 ## Identidade e referência
 
-O nome BG Store e as cores são usados em uma interface própria. A logo anexada na conversa não ficou acessível como arquivo no workspace; a tela Configurações permite enviar o original em PNG/JPG (não substituímos a marca por uma logo inventada). Até o envio, o sistema mostra as letras BG.
+O nome BG Store e as cores são usados em uma interface própria. A logo anexada na conversa não ficou acessível como arquivo no workspace; a tela Configurações permite enviar o original em PNG/JPG (não substituímos a marca por uma logo inventada). Até o envio, o sistema mostra as letras BG. Administradores podem usar “Adicionar sua logomarca” no menu sem sair da venda. A marca enviada aparece no menu, acesso, painel e novos documentos. Somente a imagem da marca é pública para o login; anexos de clientes continuam protegidos.
 
 Referência solicitada: https://mercadophone.app.br/recursos/. O acesso automatizado à página retornou HTTP 403 neste ambiente, portanto não foi possível verificar seu conteúdo. A primeira versão partiu da lista fornecida pelo proprietário. A ampliação usa a análise visual do vídeo enviado, com escopo documentado abaixo; não há cópia de marca nem declaração de paridade com a Mercado Phone.
 
 ## Referência em vídeo e atualização
 
 A análise visual do vídeo fornecido e o comparativo de escopo estão em [REFERENCIA-VIDEO.md](docs/REFERENCIA-VIDEO.md). Não há declaração de paridade integral. Para atualizar uma instalação existente com segurança, siga [ATUALIZAR.md](docs/ATUALIZAR.md).
+
+Para o cadastro durante a venda e os detalhes da nova identidade visual, consulte [NOVA-VENDA.md](docs/NOVA-VENDA.md). O site de referência visual retornou HTTP 403; a organização usa as telas do vídeo previamente fornecido, com implementação visual própria.
